@@ -11,7 +11,7 @@ import com.google.caliper.SimpleBenchmark
 
 import scala.util.Random
 
-import climadata.{raster => climadata}
+import climadata.{raster2 => climadata}
 
 /**
  * Extend this to create a main object which will run 'cls' (a benchmark).
@@ -40,7 +40,10 @@ abstract class CompareBenchmark extends SimpleBenchmark {
   /**
    * Sugar for building arrays using a per-cell init function.
    */
-  def init[A:Manifest](size:Int)(init: => A) = {
+  // Note- the big problem with generics is that it can screw
+  // stuff up at any point. In particular, using a generic
+  // array from the get-go seems to kill speed
+  def init[@specialized A:Manifest](size:Int)(init: => A):Array[A] = {
     val data = Array.ofDim[A](size)
     for (i <- 0 until size) data(i) = init
     data
@@ -102,8 +105,8 @@ class WhileLoopBenchmark extends CompareBenchmark {
     while(row < rows) {
       var col = 0
       while(col < cols) {
-        val z = r(col,row)
-        if (z != NODATA) a = r(col,row) * 2
+        val z = r.data.get(col + row*rows)
+        if (z != NODATA) a = r.data.get(col + row*rows) * 2
         col += 1
       }
       row += 1
@@ -138,8 +141,8 @@ class WhileLoopBenchmark extends CompareBenchmark {
     while(row < rows) {
       var col = 0
       while(col < cols) {
-        val z = r(col,row)
-        if (z != NODATA) a = r(col,row) * 2
+        val z = r.data.get(col + rows*row)
+        if (z != NODATA) a = r.data.get(col + rows*row) * 2
         col += 1
       }
       row += 1
@@ -174,8 +177,8 @@ class WhileLoopBenchmark extends CompareBenchmark {
     while(row < rows) {
       var col = 0
       while(col < cols) {
-        val z = r(col,row)
-        if (z != NODATA) a = r(col,row) * 2
+        val z = r.data.get(col + rows*row)
+        if (z != NODATA) a = r.data.get(col + rows*row) * 2
         col += 1
       }
       row += 1
@@ -210,8 +213,8 @@ class WhileLoopBenchmark extends CompareBenchmark {
     while(row < rows) {
       var col = 0
       while(col < cols) {
-        val z = r(col,row)
-        if (z != NODATA) a = r(col,row) * 2
+        val z = r.data.get(col + rows*row)
+        if (z != NODATA) a = r.data.get(col + rows*row) * 2
         col += 1
       }
       row += 1
@@ -246,8 +249,8 @@ class WhileLoopBenchmark extends CompareBenchmark {
     while(row < rows) {
       var col = 0
       while(col < cols) {
-        val z = r(col,row)
-        if (z != NODATA) a = r(col,row) * 2
+        val z = r.data.get(col + rows*row)
+        if (z != NODATA) a = r.data.get(col + rows*row) * 2
         col += 1
       }
       row += 1
@@ -267,7 +270,7 @@ class AddBenchmark extends CompareBenchmark {
   def timeClimadataIntRasterAdd(reps:Int) = run(reps)(climadataIntRasterAdd)
   def climadataIntRasterAdd = {
     val r = intClimadataRaster
-    r + r
+    climadata.Operation.add(r,r)
   }
 
   def timeGeotrellisDoubleRasterAdd(reps:Int) = run(reps)(geotrellisDoubleRasterAdd)
@@ -281,7 +284,7 @@ class AddBenchmark extends CompareBenchmark {
   def climadataDoubleRasterAdd = {
     val r = doubleClimadataRaster
 
-    r + r
+    climadata.Operation.add(r,r)
   }  
 }
 
